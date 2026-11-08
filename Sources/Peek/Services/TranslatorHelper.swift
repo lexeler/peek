@@ -57,14 +57,26 @@ enum TranslatorHelper {
                     let key = "\(source)>\(target)"
                     let sourceLanguage = Locale.Language(identifier: source)
                     let targetLanguage = Locale.Language(identifier: target)
-                    do {
-                        let session = sessions[key]
-                            ?? TranslationSession(installedSource: sourceLanguage, target: targetLanguage)
-                        sessions[key] = session
-                        let response = try await session.translate(text)
-                        reply(.init(id: request.id, text: response.targetText))
-                    } catch {
-                        sessions[key] = nil
+                    // The system's translationd exits when idle. The first request after that wakes it,
+                    // but fails its preflight ("waiting on downloads", TranslationErrorDomain 16) before
+                    // the daemon is up — and meanwhile even reports the languages as missing.
+                    // So retry on a fresh session before believing anything is wrong.
+                    var translated: String?
+                    for delay in [0, 500, 1000, 2000] {
+                        if delay > 0 { try? await Task.sleep(for: .milliseconds(delay)) }
+                        do {
+                            let session = sessions[key]
+                                ?? TranslationSession(installedSource: sourceLanguage, target: targetLanguage)
+                            sessions[key] = session
+                            translated = try await session.translate(text).targetText
+                            break
+                        } catch {
+                            sessions[key] = nil
+                        }
+                    }
+                    if let translated {
+                        reply(.init(id: request.id, text: translated))
+                    } else {
                         let status = await LanguageAvailability().status(from: sourceLanguage, to: targetLanguage)
                         reply(.init(id: request.id, error: status == .installed ? "failed" : "notInstalled"))
                     }

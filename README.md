@@ -18,7 +18,7 @@ The interface is in Russian.
 
 Requires an Apple Silicon Mac (M1 or newer) running macOS 26 Tahoe.
 
-1. Download `Peek-1.0.0.zip` from [Releases](https://github.com/lexeler/peek/releases), or build it yourself (see below).
+1. Download the latest `Peek-<version>.zip` from [Releases](https://github.com/lexeler/peek/releases), or build it yourself (see below).
 2. Unzip it and drag Peek into Applications.
 3. Peek is not notarized by Apple, so macOS blocks the first launch. Run this once in Terminal:
    ```sh
